@@ -34,7 +34,7 @@ FIRST_DISC_NO = 1
 # The redundency percentage you like
 WANTED_REDUNDENCY = 20
 # The name of the directory on the dvds containing the redundency blocks
-REDUN_DIRNAME = 'rendundency'
+REDUN_DIRNAME = 'redundency'
 """ Do not edit anything below this
 """
 
@@ -48,7 +48,7 @@ created_discs = []
 
 def main():
   print 'Welcome to F-spot backup in Python\n\n'
-  print TO_BE_USED
+  print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDENCY, '%):', TO_BE_USED
   setup_stage()
   filter_relevant_dirs()
   disc_no = 1
