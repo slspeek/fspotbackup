@@ -33,14 +33,14 @@ DISC_PREFIX = 'disc'
 FIRST_DISC_NO = 1
 # The redundency percentage you like
 WANTED_REDUNDENCY = 20
-# The name of the directory on the dvds containing the redundency blocks
-REDUN_DIRNAME = 'redundency'
 """ Do not edit anything below this
 """
 
+# The name of the directory on the dvds containing the redundency blocks
+REDUN_DIRNAME = 'redundency'
 SOFTWARE_DIR = 'f-spot-backup'
 PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
-REDUNDENCY=WANTED_REDUNDENCY+6
+REDUNDENCY=WANTED_REDUNDENCY+8
 DISK=4700000000
 TO_BE_USED=DISK*100/(100+REDUNDENCY)
 relevant_paths = []
@@ -69,8 +69,8 @@ def main():
     print cmd
     cmd = 'par2 c -r' + `WANTED_REDUNDENCY` + ' ' + basename(disc) + ' *'  
     print cmd
-    #status, output = commands.getstatusoutput(cmd)
-    #print 'CMD status', status, 'OUTPUT', output
+    status, output = commands.getstatusoutput(cmd)
+    print 'CMD status', status, 'OUTPUT', output
 
 def copy_software(target):
   software_path = dirname(__file__)
