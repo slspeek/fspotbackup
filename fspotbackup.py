@@ -32,7 +32,7 @@ DISC_PREFIX = 'disc'
 # The first disknumber to start with (if you have previous backups)
 FIRST_DISC_NO = 1
 # The redundency percentage you like
-WANTED_REDUNDENCY = 20
+WANTED_REDUNDENCY = 14
 """ Do not edit anything below this
 """
 
@@ -67,7 +67,7 @@ def main():
     os.chdir(redundency_path)
     cmd = 'cd ' + redundency_path
     print cmd
-    cmd = 'par2 c -r' + `WANTED_REDUNDENCY` + ' ' + basename(disc) + ' *'  
+    cmd = 'par2 c -b3200 -r' + `WANTED_REDUNDENCY` + ' ' + basename(disc) + ' *'  
     print cmd
     status, output = commands.getstatusoutput(cmd)
     print 'CMD status', status, 'OUTPUT', output
