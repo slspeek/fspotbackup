@@ -31,24 +31,24 @@ END_DATE = (2010, 1, 1)
 DISC_PREFIX = 'disc'
 # The first disknumber to start with (if you have previous backups)
 FIRST_DISC_NO = 1
-# The redundency percentage you like
-WANTED_REDUNDENCY = 14
+# The redundancy percentage you like
+WANTED_REDUNDANCY = 14
 """ Do not edit anything below this
 """
 
-# The name of the directory on the dvds containing the redundency blocks
-REDUN_DIRNAME = 'redundency'
+# The name of the directory on the dvds containing the redundancy blocks
+REDUN_DIRNAME = 'redundancy'
 SOFTWARE_DIR = 'f-spot-backup'
 PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
-REDUNDENCY=WANTED_REDUNDENCY+8
+REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
-TO_BE_USED=DISK*100/(100+REDUNDENCY)
+TO_BE_USED=DISK*100/(100+REDUNDANCY)
 relevant_paths = []
 created_discs = []
 
 def main():
   print 'Welcome to F-spot backup in Python\n\n'
-  print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDENCY, '%):', TO_BE_USED
+  print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDANCY, '%):', TO_BE_USED
   setup_stage()
   filter_relevant_dirs()
   disc_no = 1
@@ -63,11 +63,11 @@ def main():
       target_path = setup_disc(disc_no)
     link_to_path(target_path, path)
   for disc in created_discs:
-    redundency_path = join(disc, REDUN_DIRNAME)
-    os.chdir(redundency_path)
-    cmd = 'cd ' + redundency_path
+    redundancy_path = join(disc, REDUN_DIRNAME)
+    os.chdir(redundancy_path)
+    cmd = 'cd ' + redundancy_path
     print cmd
-    cmd = 'par2 c -b3200 -r' + `WANTED_REDUNDENCY` + ' ' + basename(disc) + ' *'  
+    cmd = 'par2 c -b3200 -r' + `WANTED_REDUNDANCY` + ' ' + basename(disc) + ' *'  
     print cmd
     status, output = commands.getstatusoutput(cmd)
     print 'CMD status', status, 'OUTPUT', output
@@ -101,10 +101,10 @@ def link_to_path(links_dir, link_targets_dir):
     link_name =  join(target_day, file)
     link(target_file, link_name)
     flat_hard_link_basename = year + '___' + month + '___' + day + '___' + file 
-    redundency_path = join(links_dir, '..', REDUN_DIRNAME)
-    redundency_link_name = join(redundency_path, flat_hard_link_basename)
-    #print link_name, redundency_link_name
-    link(link_name, redundency_link_name)
+    redundancy_path = join(links_dir, '..', REDUN_DIRNAME)
+    redundancy_link_name = join(redundancy_path, flat_hard_link_basename)
+    #print link_name, redundancy_link_name
+    link(link_name, redundancy_link_name)
 
 def dir_size(path):
   size = 0
@@ -134,13 +134,13 @@ def setup_disc(disc_no):
   disc_no_str = ('%03d') % (disc_no + (FIRST_DISC_NO - 1))
   disc_path = join(STAGE, DISC_PREFIX + disc_no_str)
   disc_target_path = join(disc_path, PHOTOS_DIR_BASENAME)
-  redundency_path = join(disc_path, REDUN_DIRNAME)
+  redundancy_path = join(disc_path, REDUN_DIRNAME)
   if not exists(disc_path):
     mkdir(disc_path)
   if not exists(disc_target_path):
     mkdir(disc_target_path)
-  if not exists(redundency_path):
-    mkdir(redundency_path)
+  if not exists(redundancy_path):
+    mkdir(redundancy_path)
   print 'Setup', disc_target_path
   created_discs.append(disc_path)
   copy_photos_db(disc_path)
