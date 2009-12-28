@@ -46,6 +46,15 @@ TO_BE_USED=DISK*100/(100+REDUNDANCY)
 relevant_paths = []
 created_discs = []
 
+
+class File(object):
+  """ Respresents one file to be backed up """
+  def __init(self, year, month, day, filename):
+    self.year = year
+    self.month = month
+    self.day = day
+    self.filename = filename
+
 def main():
   print 'Welcome to F-spot backup in Python\n\n'
   print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDANCY, '%):', TO_BE_USED
