@@ -129,11 +129,14 @@ class Day(object):
     self.files = []
     self.size = 0
 
+  def make_links(self, disc):
+    for file in self.files:
+      file.link(disc)
+
   def scan(self):
     for filename in os.listdir(self.source_path()):
       file = File(self.year, self.month, self.day, filename)
       self.files.append(file)
-      print file
       self.size += file.get_size()
 
   def source_path(self):
@@ -144,7 +147,7 @@ class Day(object):
     return path
 
   def target_path(self, disc):
-    path = join(disc.disc_target_path, PHOTOS_DIR_BASENAME, 
+    path = join(disc.disc_target_path,
     self.year, 
     self.month, 
     self.day)
@@ -163,6 +166,9 @@ class File(Day):
 
   def target_path(self, disc):
     return join(Day.target_path(self, disc), self.filename)
+
+  def link(self, disc):
+    link(self.source_path(), self.target_path(disc))
 
   def redundancy_path(self, disc):
     linkname = self.year + LINK_SEPARATOR  
@@ -197,6 +203,7 @@ def main():
     #link_to_path(target_path, path)
     disc.add(day)
     day.make_dir(disc)
+    day.make_links(disc)
   for disc in created_discs:
     print disc
 
