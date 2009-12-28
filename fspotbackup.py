@@ -20,9 +20,9 @@ import shutil
 """ Edit these values to meet yout needs
 """
 # This property defines where the f-spot photo directory is
-PHOTOS_DIR = '~/Photos'
+PHOTOS_DIR = expanduser('~/Photos')
 # The working directory of this program (must be on same filesystem)
-STAGE = '~/stage'
+STAGE = expanduser('~/stage')
 # This is the inclusive start date 
 START_DATE = (2006, 1, 1)
 # This is th incluve end date
@@ -38,7 +38,7 @@ WANTED_REDUNDANCY = 14
 
 # The name of the directory on the dvds containing the redundancy blocks
 REDUN_DIRNAME = 'redundancy'
-SOFTWARE_DIR = 'f-spot-backup'
+SOFTWARE_DIR = 'fspotbackup'
 PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
 REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
@@ -126,10 +126,6 @@ def setup_stage():
   """Sets up the stage directory where we are going the create discs from
    the photo directory
    """
-  global STAGE
-  STAGE = expanduser(STAGE)
-  global PHOTOS_DIR
-  PHOTOS_DIR = expanduser(PHOTOS_DIR)
   global PHOTOS_DIR_BASENAME 
   PHOTOS_DIR_BASENAME = basename(PHOTOS_DIR)
   if not exists(STAGE):
