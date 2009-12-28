@@ -16,6 +16,7 @@ import commands
 from os.path import join, exists, expanduser, basename, dirname, split
 from os import mkdir, link
 import shutil
+from datetime import date, timedelta
 
 """ Edit these values to meet yout needs
 """
@@ -43,6 +44,7 @@ PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
 REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
 TO_BE_USED=DISK*100/(100+REDUNDANCY)
+LINK_SEPARATOR='___'
 relevant_paths = []
 created_discs = []
 
@@ -54,6 +56,30 @@ class File(object):
     self.month = month
     self.day = day
     self.filename = filename
+
+  def source_path(self):
+    path = join(PHOTOS_DIR,
+                self.year,
+                self.month,
+                self.day,
+                self.filename)
+    return path
+
+  def target_path(self, disc):
+    path = join(STAGE, disc, PHOTOS_DIR_BASENAME, 
+    self.year, 
+    self.month, 
+    self.day, 
+    self.filename)
+    return path
+
+  def redundancy_path(self, disc):
+    linkname = self.year + LINK_SEPARATOR  
+    linkname += self.month + LINK_SEPARATOR  
+    linkname += self.day + LINK_SEPARATOR
+    linkname += self.filename
+    path = join(STAGE, disc, REDUN_DIRNAME, link_name)
+    return path
 
 def main():
   print 'Welcome to F-spot backup in Python\n\n'
