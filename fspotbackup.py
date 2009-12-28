@@ -40,38 +40,127 @@ WANTED_REDUNDANCY = 14
 # The name of the directory on the dvds containing the redundancy blocks
 REDUN_DIRNAME = 'redundancy'
 SOFTWARE_DIR = 'fspotbackup'
+FILELIST_POSTFIX = '_file.list'
+REPAIR_SCRIPT = 'par2repair.sh'
+CREATE_PAR2_SCRIPT = 'par2create.sh'
+VERIFY_SCRIPT = 'par2verify.sh'
+CREATE_LINKS_SCRIPT = 'create_links.sh'
+REMOVE_LINKS_SCRIPT = 'remove_links.sh'
+SCRIPTS_DIR = 'scripts'
 PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
 REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
 TO_BE_USED=DISK*100/(100+REDUNDANCY)
 LINK_SEPARATOR='___'
-relevant_paths = []
+relevant_onedays = []
 created_discs = []
 
+class Disc(object):
+  """ One medium volume """
+  def __init__(self, disc_no):
+      self.disc_no = disc_no
+      self.onedays = []
+      self.size = 0
 
-class File(object):
+  def size(self):
+    return self.size
+
+  def setup_disc(self):
+    """ Sets the stage for one particular disc in this backup
+        set. Returns the path to copy to for this disc. 
+        """
+    disc_no_str = ('%03d') % (self.disc_no+ (FIRST_DISC_NO - 1))
+    self.disc = DISC_PREFIX + disc_no_str
+    self.disc_path = join(STAGE, self.disc)
+    self.disc_target_path = join(self.disc_path, PHOTOS_DIR_BASENAME)
+    self.redundancy_path = join(self.disc_path, REDUN_DIRNAME)
+    if not exists(self.disc_target_path):
+      os.makedirs(self.disc_target_path)
+    if not exists(self.redundancy_path):
+      mkdir(self.redundancy_path)
+    print 'Setup', self.disc
+    created_discs.append(self)
+    self.copy_photos_db()
+    self.copy_software()
+    return self.disc_target_path
+
+  def add(oneday):
+    self.onedays.append(oneday)
+    self.size += oneday.size()
+
+  def copy_software(self):
+    software_path = dirname(__file__)
+    software_target = join(self.disc_path, SOFTWARE_DIR)
+    shutil.copytree(software_path, software_target)
+
+  def copy_photos_db(self):
+    shutil.copy(PHOTOS_DB, self.disc_path)
+    photo_db_basename = basename(PHOTOS_DB)
+    photo_db_ondisc = join(self.disc_path, photo_db_basename)
+    link(photo_db_ondisc, join(self.disc_path, REDUN_DIRNAME, photo_db_basename))
+
+  def create_par2create_script(self):
+    cmd = 'par2 c -b3200 -r' + `WANTED_REDUNDANCY` + ' ' + basename(disc) + ' *'  
+    print cmd
+  
+  def create_par2verify_script(self):
+    cmd = 'par2 v ' + self.disc + '.par2'  
+    print cmd
+
+  def create_par2repair_script(self):
+    pass
+
+  def create_link_removal_script(self):
+    pass
+
+  def write_script(self, script_name, content):
+    pass
+
+  def create_filelist(self):
+    pass
+
+
+class OneDay(object):
   """ Respresents one file to be backed up """
-  def __init(self, year, month, day, filename):
+  def __init__(self, year, month, day):
     self.year = year
     self.month = month
     self.day = day
-    self.filename = filename
+    self.files = []
+    self.size = 0
+
+  def scan(self):
+    for filename in os.listdir(self.source_path()):
+      file = File(self.year, self.month, self.day, filename)
+      self.files.append(file)
+      print file
+      self.size += file.get_size()
 
   def source_path(self):
     path = join(PHOTOS_DIR,
                 self.year,
                 self.month,
-                self.day,
-                self.filename)
+                self.day)
     return path
 
   def target_path(self, disc):
     path = join(STAGE, disc, PHOTOS_DIR_BASENAME, 
     self.year, 
     self.month, 
-    self.day, 
-    self.filename)
+    self.day)
     return path
+  
+
+class File(OneDay):
+  def __init__(self, year, month, day, filename):
+    OneDay.__init__(self, year, month, day)
+    self.filename = filename
+
+  def source_path(self):
+    return join(OneDay.source_path(self), self.filename)
+
+  def target_path(self, disc):
+    return join(OneDay.target_path(self, disc), self.filename)
 
   def redundancy_path(self, disc):
     linkname = self.year + LINK_SEPARATOR  
@@ -81,6 +170,13 @@ class File(object):
     path = join(STAGE, disc, REDUN_DIRNAME, link_name)
     return path
 
+  def get_size(self):
+    return os.path.getsize(self.source_path())
+
+"""                                    """
+""" Beginning of the modules functions """
+"""                                    """
+
 def main():
   print 'Welcome to F-spot backup in Python\n\n'
   print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDANCY, '%):', TO_BE_USED
@@ -88,35 +184,18 @@ def main():
   filter_relevant_dirs()
   disc_no = 1
   disk_usage = 0
-  target_path = setup_disc(disc_no)
-  for path in relevant_paths:
-    current_dir_size = dir_size(path)
-    used_on_disc = dir_size(target_path)
-    #print 'current', current_dir_size, 'used_on_disc', used_on_disc
-    if (current_dir_size + used_on_disc)>TO_BE_USED:
+  disc = Disc(disc_no)
+  disc.setup_disc()
+  for oneday in relevant_onedays:
+    oneday.scan()
+    if (oneday.size + disc.size) > TO_BE_USED:
       disc_no += 1
-      target_path = setup_disc(disc_no)
-    link_to_path(target_path, path)
+      disc = Disc(disc_no)
+      disc.setup_disc()
+    #link_to_path(target_path, path)
   for disc in created_discs:
-    redundancy_path = join(disc, REDUN_DIRNAME)
-    os.chdir(redundancy_path)
-    cmd = 'cd ' + redundancy_path
-    print cmd
-    cmd = 'par2 c -b3200 -r' + `WANTED_REDUNDANCY` + ' ' + basename(disc) + ' *'  
-    print cmd
-    status, output = commands.getstatusoutput(cmd)
-    print 'CMD status', status, 'OUTPUT', output
+    print disc
 
-def copy_software(target):
-  software_path = dirname(__file__)
-  software_target = join(target, SOFTWARE_DIR)
-  shutil.copytree(software_path, software_target)
-
-def copy_photos_db(target):
-  shutil.copy(PHOTOS_DB, target)
-  photo_db_basename = basename(PHOTOS_DB)
-  photo_db_ondisc = join(target, photo_db_basename)
-  link(photo_db_ondisc, join(target, REDUN_DIRNAME, photo_db_basename))
 
 def link_to_path(links_dir, link_targets_dir):
   dirs, day = os.path.split(link_targets_dir)
@@ -157,80 +236,42 @@ def setup_stage():
   if not exists(STAGE):
     mkdir(STAGE)
 
-def setup_disc(disc_no):
-  """ Sets the stage for one particular disc in this backup
-      set. 
-      Returns the path to copy to for this disc. 
-      """
-  disc_no_str = ('%03d') % (disc_no + (FIRST_DISC_NO - 1))
-  disc_path = join(STAGE, DISC_PREFIX + disc_no_str)
-  disc_target_path = join(disc_path, PHOTOS_DIR_BASENAME)
-  redundancy_path = join(disc_path, REDUN_DIRNAME)
-  if not exists(disc_path):
-    mkdir(disc_path)
-  if not exists(disc_target_path):
-    mkdir(disc_target_path)
-  if not exists(redundancy_path):
-    mkdir(redundancy_path)
-  print 'Setup', disc_target_path
-  created_discs.append(disc_path)
-  copy_photos_db(disc_path)
-  copy_software(disc_path)
-  return disc_target_path
-
-
-def make_path(year_str, month_str, day_str):
-  """ joins its arguments prepended by the photo dir """
-  path = join(PHOTOS_DIR, year_str, month_str, day_str)
-  return path
-
-def paths_for_day(year, month, day):
+def tuples_for_day(year, month, day):
   """Make all different ways of spelling the directory
      whether or not zero padding could be added."""
-  paths = []
+  tuples = []
   year_str = `year`
   month_str = `month`
   day_str = `day`
-  paths.append(make_path(year_str, month_str, day_str))
+  tuples.append((year_str, month_str, day_str))
   if month < 10:
     month_str = ('%02d') % month
-    paths.append(make_path(year_str, month_str, day_str))
+    tuples.append((year_str, month_str, day_str))
     if day < 10:
       day_str = ('%02d') % day
-      paths.append(make_path(year_str, month_str, day_str))
-      paths.append(make_path(year_str, `month`, day_str))
+      tuples.append((year_str, month_str, day_str))
+      tuples.append((year_str, `month`, day_str))
   elif day < 10:
     day_str = ('%02d') % day
-    paths.append(make_path(year_str, month_str, day_str))
-  return paths
+    tuples.append((year_str, month_str, day_str))
+  return tuples
 
 def deal_with_possible_day(year, month, day):
-  for path in paths_for_day(year, month, day):
-    if exists(path):
-      global relevant_paths
-      relevant_paths.append(path)
+  for day in tuples_for_day(year, month, day):
+    if exists(join(PHOTOS_DIR, day[0], day[1], day[2])):
+      global relevant_onedays
+      relevant_onedays.append(OneDay(day[0], day[1], day[2]))
 
 def filter_relevant_dirs(start=START_DATE, end=END_DATE):
-  """ Finds all possible dates (even a little more) from the 
-      start to the end. """ 
-  year = start[0]
-  month = start[1]
-  for day in range(start[2],32):
-    deal_with_possible_day(year, month, day)
-  for month in range(start[2]+1,13):
-    for day in range(01,32):
-      deal_with_possible_day(year, month, day)
-  for year in range(start[0]+1, end[0]):
-    for month in range(01,13):
-      for day in range(01,32):
-        deal_with_possible_day(year, month, day)
-  year = end[0]
-  for month in range(01,end[1]):
-    for day in range(01,32):
-      deal_with_possible_day(year, month, day)
-  month = end[1]
-  for day in range(01,end[2]+1):
-    deal_with_possible_day(year, month, day)
+  """ Finds all possible dates from the start to the end. """ 
+  start_date = date(start[0], start[1], start[2])
+  end_date = date(end[0], end[1], end[2])
+  one_day = timedelta(days=1)
+  current_date = start_date
+  while current_date <= end_date:
+    deal_with_possible_day(current_date.year, current_date.month, current_date.day)
+    current_date += one_day
+
 
 if __name__ == "__main__":
       main()
