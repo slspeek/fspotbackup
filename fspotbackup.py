@@ -120,7 +120,7 @@ class Disc(object):
     pass
 
 
-class OneDay(object):
+class Day(object):
   """ Respresents one file to be backed up """
   def __init__(self, year, month, day):
     self.year = year
@@ -151,16 +151,16 @@ class OneDay(object):
     return path
   
 
-class File(OneDay):
+class File(Day):
   def __init__(self, year, month, day, filename):
-    OneDay.__init__(self, year, month, day)
+    Day.__init__(self, year, month, day)
     self.filename = filename
 
   def source_path(self):
-    return join(OneDay.source_path(self), self.filename)
+    return join(Day.source_path(self), self.filename)
 
   def target_path(self, disc):
-    return join(OneDay.target_path(self, disc), self.filename)
+    return join(Day.target_path(self, disc), self.filename)
 
   def redundancy_path(self, disc):
     linkname = self.year + LINK_SEPARATOR  
@@ -260,7 +260,7 @@ def deal_with_possible_day(year, month, day):
   for day in tuples_for_day(year, month, day):
     if exists(join(PHOTOS_DIR, day[0], day[1], day[2])):
       global relevant_onedays
-      relevant_onedays.append(OneDay(day[0], day[1], day[2]))
+      relevant_onedays.append(Day(day[0], day[1], day[2]))
 
 def filter_relevant_dirs(start=START_DATE, end=END_DATE):
   """ Finds all possible dates from the start to the end. """ 
