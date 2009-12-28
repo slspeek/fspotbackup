@@ -52,7 +52,7 @@ REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
 TO_BE_USED=DISK*100/(100+REDUNDANCY)
 LINK_SEPARATOR='___'
-relevant_onedays = []
+relevant_days = []
 created_discs = []
 
 class Disc(object):
@@ -150,6 +150,8 @@ class Day(object):
     self.day)
     return path
   
+  def make_dir(self, disc):
+    os.makedirs(join(STAGE, disc, PHOTOS_DIR_BASENAME, self.year, self.month, self.day))
 
 class File(Day):
   def __init__(self, year, month, day, filename):
@@ -186,13 +188,14 @@ def main():
   disk_usage = 0
   disc = Disc(disc_no)
   disc.setup_disc()
-  for oneday in relevant_onedays:
-    oneday.scan()
-    if (oneday.size + disc.size) > TO_BE_USED:
+  for day in relevant_days:
+    day.scan()
+    if (day.size + disc.size) > TO_BE_USED:
       disc_no += 1
       disc = Disc(disc_no)
       disc.setup_disc()
     #link_to_path(target_path, path)
+    day.make_dir(disc.disc)
   for disc in created_discs:
     print disc
 
@@ -259,8 +262,8 @@ def tuples_for_day(year, month, day):
 def deal_with_possible_day(year, month, day):
   for day in tuples_for_day(year, month, day):
     if exists(join(PHOTOS_DIR, day[0], day[1], day[2])):
-      global relevant_onedays
-      relevant_onedays.append(Day(day[0], day[1], day[2]))
+      global relevant_days
+      relevant_days.append(Day(day[0], day[1], day[2]))
 
 def filter_relevant_dirs(start=START_DATE, end=END_DATE):
   """ Finds all possible dates from the start to the end. """ 
