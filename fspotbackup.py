@@ -69,7 +69,7 @@ class Disc(object):
     """ Sets the stage for one particular disc in this backup
         set. Returns the path to copy to for this disc. 
         """
-    disc_no_str = ('%03d') % (self.disc_no+ (FIRST_DISC_NO - 1))
+    disc_no_str = ('%03d') % (self.disc_no + (FIRST_DISC_NO - 1))
     self.disc = DISC_PREFIX + disc_no_str
     self.disc_path = join(STAGE, self.disc)
     self.disc_target_path = join(self.disc_path, PHOTOS_DIR_BASENAME)
@@ -84,9 +84,9 @@ class Disc(object):
     self.copy_software()
     return self.disc_target_path
 
-  def add(oneday):
-    self.onedays.append(oneday)
-    self.size += oneday.size()
+  def add(self, day):
+    self.onedays.append(day)
+    self.size += day.size
 
   def copy_software(self):
     software_path = dirname(__file__)
@@ -144,14 +144,14 @@ class Day(object):
     return path
 
   def target_path(self, disc):
-    path = join(STAGE, disc, PHOTOS_DIR_BASENAME, 
+    path = join(disc.disc_target_path, PHOTOS_DIR_BASENAME, 
     self.year, 
     self.month, 
     self.day)
     return path
   
   def make_dir(self, disc):
-    os.makedirs(join(STAGE, disc, PHOTOS_DIR_BASENAME, self.year, self.month, self.day))
+    os.makedirs(join(disc.disc_target_path, self.year, self.month, self.day))
 
 class File(Day):
   def __init__(self, year, month, day, filename):
@@ -169,7 +169,7 @@ class File(Day):
     linkname += self.month + LINK_SEPARATOR  
     linkname += self.day + LINK_SEPARATOR
     linkname += self.filename
-    path = join(STAGE, disc, REDUN_DIRNAME, link_name)
+    path = join(disc.disc_path, REDUN_DIRNAME, link_name)
     return path
 
   def get_size(self):
@@ -195,7 +195,8 @@ def main():
       disc = Disc(disc_no)
       disc.setup_disc()
     #link_to_path(target_path, path)
-    day.make_dir(disc.disc)
+    disc.add(day)
+    day.make_dir(disc)
   for disc in created_discs:
     print disc
 
