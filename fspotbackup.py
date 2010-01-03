@@ -46,12 +46,14 @@ CREATE_PAR2_SCRIPT = 'par2create.sh'
 VERIFY_SCRIPT = 'par2verify.sh'
 CREATE_LINKS_SCRIPT = 'create_links.sh'
 REMOVE_LINKS_SCRIPT = 'remove_links.sh'
+CREATE_ISO_SCRIPT = 'create_iso_image.sh'
 SCRIPTS_DIR = 'scripts'
 PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
 REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
 TO_BE_USED=DISK*100/(100+REDUNDANCY)
 LINK_SEPARATOR='___'
+
 relevant_days = []
 created_discs = []
 
@@ -59,7 +61,7 @@ class Disc(object):
   """ One medium volume """
   def __init__(self, disc_no):
       self.disc_no = disc_no
-      self.onedays = []
+      self.days = []
       self.size = 0
 
   def size(self):
@@ -85,7 +87,7 @@ class Disc(object):
     return self.disc_target_path
 
   def add(self, day):
-    self.onedays.append(day)
+    self.days.append(day)
     self.size += day.size
 
   def copy_software(self):
@@ -104,8 +106,9 @@ class Disc(object):
     print cmd
   
   def create_par2verify_script(self):
-    cmd = 'par2 v ' + self.disc + '.par2'  
-    print cmd
+    content = 'cd ../' + REDUN_DIRNAME + ' && ' 
+    content += 'par2 v ' + self.disc + '.par2\n'  
+    write_script(self, CREATE_PAR2_SCRIPT, content)
 
   def create_par2repair_script(self):
     pass
@@ -117,6 +120,11 @@ class Disc(object):
     pass
 
   def create_filelist(self):
+    file_list = open(join(self.disc_path, self.disc + FILELIST_POSTFIX), 'w')
+    for day in self.days:
+      for file in day.files:
+        file_list.write(file.ondisc_path(self) + ' (' + file.source_path() + ')\n')
+    file_list.close()
     pass
 
 
@@ -167,6 +175,9 @@ class File(Day):
   def target_path(self, disc):
     return join(Day.target_path(self, disc), self.filename)
 
+  def ondisc_path(self, disc):
+    return join(PHOTOS_DIR_BASENAME, self.year, self.month, self.day, self.filename)
+
   def link(self, disc):
     link(self.source_path(), self.target_path(disc))
 
@@ -206,37 +217,7 @@ def main():
     day.make_links(disc)
   for disc in created_discs:
     print disc
-
-
-def link_to_path(links_dir, link_targets_dir):
-  dirs, day = os.path.split(link_targets_dir)
-  dirs, month = os.path.split(dirs)
-  year = basename(dirs)
-  target_year = join(links_dir, year)
-  if not exists(target_year):
-    mkdir(target_year)
-  target_month = join(target_year, month)
-  if not exists(target_month):
-    mkdir(target_month)
-  target_day = join(target_month, day)
-  if not exists(target_day):
-    mkdir(target_day)
-  for file in os.listdir(link_targets_dir):
-    target_file = join(link_targets_dir, file)
-    link_name =  join(target_day, file)
-    link(target_file, link_name)
-    flat_hard_link_basename = year + '___' + month + '___' + day + '___' + file 
-    redundancy_path = join(links_dir, '..', REDUN_DIRNAME)
-    redundancy_link_name = join(redundancy_path, flat_hard_link_basename)
-    #print link_name, redundancy_link_name
-    link(link_name, redundancy_link_name)
-
-def dir_size(path):
-  size = 0
-  status , output = commands.getstatusoutput("du -sb " + path)
-  if not status:
-    size = output.split()[0] 
-  return int(size)
+    disc.create_filelist()
 
 def setup_stage():
   """Sets up the stage directory where we are going the create discs from
