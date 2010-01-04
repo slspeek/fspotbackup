@@ -8,7 +8,6 @@
     Staging for creation of a disc is done by hardlinking when possible.
     You can specify where to start and where to end.
     """
-#TODO: genisoimage -V $JUTTERSDOK_FINAL -R -J -iso-level 4 -o jutnet-$JUTTERSDOK_FINAL.iso $BACKUP_DIR/*
 
 import os
 import sys
@@ -47,6 +46,7 @@ VERIFY_SCRIPT = 'par2verify.sh'
 CREATE_LINKS_SCRIPT = 'create_links.sh'
 REMOVE_LINKS_SCRIPT = 'remove_links.sh'
 CREATE_ISO_SCRIPT = 'create_iso_image.sh'
+SCRIPTS = [REPAIR_SCRIPT, CREATE_LINKS_SCRIPT, REMOVE_LINKS_SCRIPT, VERIFY_SCRIPT, CREATE_PAR2_SCRIPT, CREATE_ISO_SCRIPT]
 SCRIPTS_DIR = 'scripts'
 PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
 REDUNDANCY=WANTED_REDUNDANCY+8
@@ -64,27 +64,35 @@ class Disc(object):
       self.days = []
       self.size = 0
 
+  def create_scripts(self):
+    self.create_par2create_script()
+    self.create_par2verify_script()
+    self.create_par2repair_script()
+    self.create_link_removal_script()
+    self.create_link_creation_script()
+    self.create_iso_script()
+    self.create_filelist()
+
   def size(self):
     return self.size
 
   def setup_disc(self):
     """ Sets the stage for one particular disc in this backup
-        set. Returns the path to copy to for this disc. 
+        set. 
         """
     disc_no_str = ('%03d') % (self.disc_no + (FIRST_DISC_NO - 1))
-    self.disc = DISC_PREFIX + disc_no_str
-    self.disc_path = join(STAGE, self.disc)
-    self.disc_target_path = join(self.disc_path, PHOTOS_DIR_BASENAME)
-    self.redundancy_path = join(self.disc_path, REDUN_DIRNAME)
-    if not exists(self.disc_target_path):
-      os.makedirs(self.disc_target_path)
-    if not exists(self.redundancy_path):
-      mkdir(self.redundancy_path)
-    print 'Setup', self.disc
+    self.name = DISC_PREFIX + disc_no_str
+    self.path = join(STAGE, self.name)
+    self.target_path = join(self.path, PHOTOS_DIR_BASENAME)
+    self.redundancy_path = join(self.path, REDUN_DIRNAME)
+    self.script_dir = join(self.path, SCRIPTS_DIR)
+    os.makedirs(self.target_path)
+    mkdir(self.redundancy_path)
+    mkdir(self.script_dir)
+    print 'Setup', self.name
     created_discs.append(self)
     self.copy_photos_db()
     self.copy_software()
-    return self.disc_target_path
 
   def add(self, day):
     self.days.append(day)
@@ -92,40 +100,77 @@ class Disc(object):
 
   def copy_software(self):
     software_path = dirname(__file__)
-    software_target = join(self.disc_path, SOFTWARE_DIR)
+    software_target = join(self.path, SOFTWARE_DIR)
     shutil.copytree(software_path, software_target)
 
   def copy_photos_db(self):
-    shutil.copy(PHOTOS_DB, self.disc_path)
-    photo_db_basename = basename(PHOTOS_DB)
-    photo_db_ondisc = join(self.disc_path, photo_db_basename)
-    link(photo_db_ondisc, join(self.disc_path, REDUN_DIRNAME, photo_db_basename))
+    shutil.copy(PHOTOS_DB, self.path)
 
   def create_par2create_script(self):
-    cmd = 'par2 c -b3200 -r' + `WANTED_REDUNDANCY` + ' ' + basename(disc) + ' *'  
-    print cmd
+    content = './' + CREATE_LINKS_SCRIPT + '\n'
+    content += 'cd ../' + REDUN_DIRNAME + '\n'
+    content += 'par2 c -b3200 -r' + `WANTED_REDUNDANCY` + ' ' + self.name + ' *'  
+    self.write_script(CREATE_PAR2_SCRIPT, content)
   
   def create_par2verify_script(self):
-    content = 'cd ../' + REDUN_DIRNAME + ' && ' 
-    content += 'par2 v ' + self.disc + '.par2\n'  
-    write_script(self, CREATE_PAR2_SCRIPT, content)
+    content = './' + CREATE_LINKS_SCRIPT + '\n'
+    content += 'cd ../' + REDUN_DIRNAME + ' && ' 
+    content += 'par2 v ' + self.name + '.par2\n'  
+    self.write_script(VERIFY_SCRIPT, content)
+
+  def create_iso_script(self):
+    content = 'cd ../\n'
+    content += 'genisoimage -V ' + self.name + ' -R -J -iso-level 4 -o ../' + self.name + '.iso *\n'
+    self.write_script(CREATE_ISO_SCRIPT, content)
 
   def create_par2repair_script(self):
-    pass
+    content = 'cd ../' + REDUN_DIRNAME + '\n'
+    content += 'par2 r ' + self.name + '.par2\n'  
+    self.write_script(REPAIR_SCRIPT, content)
+
+
+  def create_link_creation_script(self):
+    def link(source, target):
+      return 'ln "' + source + '" "' + target + '"\n'
+
+    content = 'cd ..\n'
+    for script in SCRIPTS:
+      content += link(join(SCRIPTS_DIR, script), join(REDUN_DIRNAME, script))
+    photo_db_basename = basename(PHOTOS_DB)
+    content += link(photo_db_basename, join(REDUN_DIRNAME, photo_db_basename))
+    for day in self.days:
+      for file in day.files:
+        content += link(file.ondisc_path(self), file.redundancy_path(self))
+    self.write_script(CREATE_LINKS_SCRIPT, content)
+    
 
   def create_link_removal_script(self):
-    pass
+    def rm(target):
+      return 'rm "' + target + '"\n'
+
+    content = 'cd ../' + REDUN_DIRNAME + '\n'
+    content += rm(basename(PHOTOS_DB))
+    for script in SCRIPTS:
+      content +=  rm(script)
+    content += 'cd ..\n'
+    for day in self.days:
+      for file in day.files:
+        content += rm(file.redundancy_path(self))
+    self.write_script(REMOVE_LINKS_SCRIPT, content)
 
   def write_script(self, script_name, content):
-    pass
+    script_path = join(self.script_dir, script_name)
+    script = open(script_path, 'w')
+    script.write(content)
+    script.close()
+    os.chmod(script_path, 0755)
 
   def create_filelist(self):
-    file_list = open(join(self.disc_path, self.disc + FILELIST_POSTFIX), 'w')
+    file_list = open(join(self.path, self.name + FILELIST_POSTFIX), 'w')
     for day in self.days:
       for file in day.files:
         file_list.write(file.ondisc_path(self) + ' (' + file.source_path() + ')\n')
     file_list.close()
-    pass
 
 
 class Day(object):
@@ -155,14 +200,14 @@ class Day(object):
     return path
 
   def target_path(self, disc):
-    path = join(disc.disc_target_path,
+    path = join(disc.target_path,
     self.year, 
     self.month, 
     self.day)
     return path
   
   def make_dir(self, disc):
-    os.makedirs(join(disc.disc_target_path, self.year, self.month, self.day))
+    os.makedirs(join(disc.target_path, self.year, self.month, self.day))
 
 class File(Day):
   def __init__(self, year, month, day, filename):
@@ -186,7 +231,7 @@ class File(Day):
     linkname += self.month + LINK_SEPARATOR  
     linkname += self.day + LINK_SEPARATOR
     linkname += self.filename
-    path = join(disc.disc_path, REDUN_DIRNAME, link_name)
+    path = join(REDUN_DIRNAME, linkname)
     return path
 
   def get_size(self):
@@ -211,13 +256,13 @@ def main():
       disc_no += 1
       disc = Disc(disc_no)
       disc.setup_disc()
-    #link_to_path(target_path, path)
     disc.add(day)
     day.make_dir(disc)
     day.make_links(disc)
   for disc in created_discs:
-    print disc
-    disc.create_filelist()
+    print 'Creating scripts for ' + disc.name
+    disc.create_scripts()
+  print 'Done (you can run the scripts).'
 
 def setup_stage():
   """Sets up the stage directory where we are going the create discs from
