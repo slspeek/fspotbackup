@@ -39,6 +39,7 @@ WANTED_REDUNDANCY = 14
 # The name of the directory on the dvds containing the redundancy blocks
 REDUN_DIRNAME = 'redundancy'
 SOFTWARE_DIR = 'fspotbackup'
+SUPER_SCRIPT = 'fsbackup_batch.sh'
 FILELIST_POSTFIX = '_file.list'
 REPAIR_SCRIPT = 'par2repair.sh'
 CREATE_PAR2_SCRIPT = 'par2create.sh'
@@ -55,10 +56,26 @@ TO_BE_USED=DISK*100/(100+REDUNDANCY)
 LINK_SEPARATOR='___'
 
 relevant_days = []
-created_discs = []
+
+def create_super_script():
+  script_path = join(STAGE, SUPER_SCRIPT)
+  super_script = open(script_path, 'w')
+  content = ''
+  for disc in Disc.created_discs:
+    content += 'cd ' + join(disc.name, SCRIPTS_DIR) + '\n'
+    content += './' + CREATE_PAR2_SCRIPT + '\n'
+    content += './' + CREATE_ISO_SCRIPT + '\n'
+    content += 'cd ../..\n\n'
+  super_script.write(content)
+  super_script.close()
+  os.chmod(script_path, 0755)
 
 class Disc(object):
   """ One medium volume """
+  created_discs = []
+  
+
+
   def __init__(self, disc_no):
       self.disc_no = disc_no
       self.days = []
@@ -73,9 +90,6 @@ class Disc(object):
     self.create_iso_script()
     self.create_filelist()
 
-  def size(self):
-    return self.size
-
   def setup_disc(self):
     """ Sets the stage for one particular disc in this backup
         set. 
@@ -89,8 +103,7 @@ class Disc(object):
     os.makedirs(self.target_path)
     mkdir(self.redundancy_path)
     mkdir(self.script_dir)
-    print 'Setup', self.name
-    created_discs.append(self)
+    Disc.created_discs.append(self)
     self.copy_photos_db()
     self.copy_software()
 
@@ -119,7 +132,8 @@ class Disc(object):
     self.write_script(VERIFY_SCRIPT, content)
 
   def create_iso_script(self):
-    content = 'cd ../\n'
+    content = './' + REMOVE_LINKS_SCRIPT + '\n'
+    content += 'cd ../\n'
     content += 'genisoimage -V ' + self.name + ' -R -J -iso-level 4 -o ../' + self.name + '.iso *\n'
     self.write_script(CREATE_ISO_SCRIPT, content)
 
@@ -174,7 +188,7 @@ class Disc(object):
 
 
 class Day(object):
-  """ Respresents one file to be backed up """
+  """ Respresents one lowest level directory to be backed up """
   def __init__(self, year, month, day):
     self.year = year
     self.month = month
@@ -242,8 +256,8 @@ class File(Day):
 """                                    """
 
 def main():
-  print 'Welcome to F-spot backup in Python\n\n'
-  print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDANCY, '%):', TO_BE_USED
+  print 'Welcome to F-spot backup in Python\n'
+  print 'Maximum amount of bytes per disc (given ', WANTED_REDUNDANCY, '%):', TO_BE_USED , '\n'
   setup_stage()
   filter_relevant_dirs()
   disc_no = 1
@@ -259,10 +273,11 @@ def main():
     disc.add(day)
     day.make_dir(disc)
     day.make_links(disc)
-  for disc in created_discs:
-    print 'Creating scripts for ' + disc.name
-    disc.create_scripts()
-  print 'Done (you can run the scripts).'
+  for disc in Disc.created_discs:
+    print 'Creating scripts for ' + disc.name + '. Diskspace used: ' + str(disc.size)
+    disc.create_scripts() 
+  create_super_script()
+  print '\nDone (you can type "cd ' + STAGE + ' && ./' + SUPER_SCRIPT + '").'
 
 def setup_stage():
   """Sets up the stage directory where we are going the create discs from
