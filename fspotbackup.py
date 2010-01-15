@@ -28,7 +28,7 @@ START_DATE = (2006, 1, 1)
 # This is th incluve end date
 END_DATE = (2010, 1, 1)
 # This is how the prefix of your disklabel (nyi) will look (keep is short)
-DISC_PREFIX = 'disc'
+DISC_PREFIX = 'stev'
 # The first disknumber to start with (if you have previous backups)
 FIRST_DISC_NO = 1
 # The redundancy percentage you like
@@ -40,7 +40,7 @@ WANTED_REDUNDANCY = 14
 REDUN_DIRNAME = 'redundancy'
 SOFTWARE_DIR = 'fspotbackup'
 SUPER_SCRIPT = 'fsbackup_batch.sh'
-FILELIST_POSTFIX = '_file.list'
+FILELIST_POSTFIX = '_file.lst'
 REPAIR_SCRIPT = 'par2repair.sh'
 CREATE_PAR2_SCRIPT = 'par2create.sh'
 VERIFY_SCRIPT = 'par2verify.sh'
@@ -133,8 +133,8 @@ class Disc(object):
 
   def create_iso_script(self):
     content = './' + REMOVE_LINKS_SCRIPT + '\n'
-    content += 'cd ../\n'
-    content += 'genisoimage -V ' + self.name + ' -R -J -iso-level 4 -o ../' + self.name + '.iso *\n'
+    content += 'cd ../..\n'
+    content += 'genisoimage -V ' + self.name + ' -R -J -iso-level 4 -o ' + self.name + '.iso ' + self.name + '\n'
     self.write_script(CREATE_ISO_SCRIPT, content)
 
   def create_par2repair_script(self):
