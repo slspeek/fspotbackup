@@ -9,7 +9,7 @@ if test -d $READ_BACK_DIR; then
 fi
 cp -Lrv /media/cdrom $READ_BACK_DIR
 chmod u=rwX -Rv $READ_BACK_DIR
-cd /home/steven/leestest/scripts/
+cd $READ_BACK_DIR/scripts
 ./par2verify.sh 
 cd
 rm -rvf $READ_BACK_DIR
