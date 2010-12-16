@@ -7,12 +7,12 @@ sleep 40s
 if test -d $READ_BACK_DIR; then
   rm -rfv $READ_BACK_DIR
 fi
-cp -Lrv /media/cdrom ~/leestest
-chmod u=rwX -Rv ~/leestest
+cp -Lrv /media/cdrom $READ_BACK_DIR
+chmod u=rwX -Rv $READ_BACK_DIR
 cd /home/steven/leestest/scripts/
 ./par2verify.sh 
 cd
-rm -rvf ~/leestest
+rm -rvf $READ_BACK_DIR
 eject
 
 
