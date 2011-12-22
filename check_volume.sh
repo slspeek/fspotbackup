@@ -2,11 +2,7 @@ set -e
 READ_BACK_DIR=~/stage/read_back
 DVD_DEV=/dev/dvdrw
 DVD_MNT_POINT=/media/cdrom0
-wodim -tao $1
-eject
-eject -t
-sleep 40s
-#mount -r $DVD_DEV
+mount $DVD_DEV
 
 if test -d $READ_BACK_DIR; then
   rm -rfv $READ_BACK_DIR

@@ -5,7 +5,7 @@
     The photos are directely visible from disc.
     Redundency is added, to ensure recovery when the disc gets damaged.
     The photo database is added to every disc.
-    Staging for creation of a disc is done by hardlinking when possible.
+    Staging for creation of a disc is done by hardlinking.
     You can specify where to start and where to end.
     """
 
@@ -24,15 +24,16 @@ PHOTOS_DIR = expanduser('~/Photos')
 # The working directory of this program (must be on same filesystem)
 STAGE = expanduser('~/stage')
 # This is the inclusive start date 
-START_DATE = (2006, 1, 1)
+START_DATE = (1900, 1, 1)
 # This is th incluve end date
-END_DATE = (2010, 1, 1)
+END_DATE = (2020, 1, 1)
 # This is how the prefix of your disklabel (nyi) will look (keep is short)
 DISC_PREFIX = 'stev'
 # The first disknumber to start with (if you have previous backups)
 FIRST_DISC_NO = 1
 # The redundancy percentage you like
 WANTED_REDUNDANCY = 14
+PHOTOS_DB=expanduser('~/.config/f-spot/photos.db')
 """ Do not edit anything below this
 """
 
@@ -49,7 +50,6 @@ REMOVE_LINKS_SCRIPT = 'remove_links.sh'
 CREATE_ISO_SCRIPT = 'create_iso_image.sh'
 SCRIPTS = [REPAIR_SCRIPT, CREATE_LINKS_SCRIPT, REMOVE_LINKS_SCRIPT, VERIFY_SCRIPT, CREATE_PAR2_SCRIPT, CREATE_ISO_SCRIPT]
 SCRIPTS_DIR = 'scripts'
-PHOTOS_DB=expanduser('~/.gnome2/f-spot/photos.db')
 REDUNDANCY=WANTED_REDUNDANCY+8
 DISK=4700000000
 TO_BE_USED=DISK*100/(100+REDUNDANCY)
@@ -122,7 +122,7 @@ class Disc(object):
   def create_par2create_script(self):
     content = './' + CREATE_LINKS_SCRIPT + '\n'
     content += 'cd ../' + REDUN_DIRNAME + '\n'
-    content += 'par2 c -b3200 -r' + `WANTED_REDUNDANCY` + ' ' + self.name + ' *'  
+    content += 'par2 c -b7000 -r' + `WANTED_REDUNDANCY` + ' ' + self.name + ' *'  
     self.write_script(CREATE_PAR2_SCRIPT, content)
   
   def create_par2verify_script(self):
